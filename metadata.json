@@ -1,0 +1,5 @@
+{
+  "name": "PromptMaster AI",
+  "description": "An advanced AI-powered system to generate and optimize prompts. Features intelligent reasoning, factual backing for optimization logic, and support for file inputs (PDF/Text).",
+  "requestFramePermissions": []
+}
