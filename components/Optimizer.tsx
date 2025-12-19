@@ -2,12 +2,20 @@ import React, { useState, useRef } from 'react';
 import { optimizePrompt } from '../services/geminiService';
 import { OptimizationResult, FileInput } from '../types';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { useLanguage } from '../contexts/LanguageContext';
 
-const EXAMPLES = [
+const EXAMPLES_EN = [
   "Write a story about a brave knight in a kingdom.",
   "Help me fix this Python code because it is not working.",
   "Give me 5 blog post ideas for my marketing agency.",
   "Translate the following business text into professional Spanish."
+];
+
+const EXAMPLES_ZH = [
+  "写一个关于王国里勇敢骑士的故事。",
+  "帮我修复这段 Python 代码，因为它无法运行。",
+  "为我的营销机构提供 5 个博客文章创意。",
+  "将以下商务文本翻译成专业的西班牙语。"
 ];
 
 interface HistoryItem {
@@ -16,8 +24,10 @@ interface HistoryItem {
 }
 
 const Optimizer: React.FC = () => {
+  const { t, language } = useLanguage();
   const [textInput, setTextInput] = useState('');
   const [fileInput, setFileInput] = useState<FileInput | undefined>(undefined);
+  const [scenario, setScenario] = useState('general');
   const [isLoading, setIsLoading] = useState(false);
   
   // History State
@@ -26,6 +36,18 @@ const Optimizer: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   const fileRef = useRef<HTMLInputElement>(null);
+  const currentExamples = language === 'zh' ? EXAMPLES_ZH : EXAMPLES_EN;
+
+  const SCENARIO_OPTIONS = [
+    { value: 'general', label: t('scenario.option.general') },
+    { value: 'rag', label: t('scenario.option.rag') },
+    { value: 'code', label: t('scenario.option.code') },
+    { value: 'writing', label: t('scenario.option.writing') },
+    { value: 'data', label: t('scenario.option.data') },
+    { value: 'persona', label: t('scenario.option.persona') },
+    { value: 'prd', label: t('scenario.option.prd') },
+    { value: 'hr', label: t('scenario.option.hr') },
+  ];
 
   // Derived state
   const currentItem = currentIndex >= 0 && currentIndex < history.length ? history[currentIndex] : null;
@@ -63,7 +85,7 @@ const Optimizer: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await optimizePrompt(textInput, fileInput);
+      const data = await optimizePrompt(textInput, fileInput, language, scenario);
       setHistory(prev => {
         const next = [...prev, { result: data, timestamp: Date.now() }];
         return next;
@@ -78,7 +100,7 @@ const Optimizer: React.FC = () => {
   };
 
   const handleClearHistory = () => {
-    if (window.confirm("Are you sure you want to clear your optimization history?")) {
+    if (window.confirm(t('opt.clearConfirm'))) {
       setHistory([]);
       setCurrentIndex(-1);
     }
@@ -96,30 +118,54 @@ const Optimizer: React.FC = () => {
     <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
       <div className="space-y-4 text-center sm:text-left">
         <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-secondary">
-          Prompt Optimizer
+          {t('opt.title')}
         </h2>
         <p className="text-slate-400">
-          Refine your existing prompts using advanced rhetorical analysis and structural optimization.
+          {t('opt.subtitle')}
         </p>
       </div>
 
       <div className="glass-panel rounded-2xl p-6 shadow-xl space-y-6">
+        
+        {/* Scenario Selection */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            {t('scenario.label')}
+          </label>
+          <div className="relative">
+            <select
+              value={scenario}
+              onChange={(e) => setScenario(e.target.value)}
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-lg pl-4 pr-10 py-3 text-sm text-slate-200 focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-all appearance-none cursor-pointer"
+            >
+              {SCENARIO_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-slate-800 text-slate-200 py-2">
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+              <i className="fas fa-chevron-down text-xs"></i>
+            </div>
+          </div>
+        </div>
+
         {/* Input Area */}
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">
-            Paste your prompt here
+            {t('opt.label')}
           </label>
           <textarea
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
-            placeholder="Paste the prompt you want to improve..."
+            placeholder={t('opt.placeholder')}
             className="w-full h-32 bg-surface border border-slate-700 rounded-xl p-4 text-slate-200 focus:ring-2 focus:ring-accent focus:border-transparent outline-none transition-all resize-none placeholder-slate-600"
           />
 
           <div className="mt-4">
-            <p className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">Load example prompt</p>
+            <p className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">{t('opt.loadExample')}</p>
             <div className="flex flex-wrap gap-2">
-              {EXAMPLES.map((ex, i) => (
+              {currentExamples.map((ex, i) => (
                 <button
                   key={i}
                   onClick={() => setTextInput(ex)}
@@ -148,7 +194,7 @@ const Optimizer: React.FC = () => {
               <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center mr-2 border border-slate-700">
                 <i className="fas fa-paperclip"></i>
               </div>
-              <span>Upload PDF, MD, or TXT</span>
+              <span>{t('opt.upload')}</span>
             </button>
             
             {fileInput && (
@@ -171,7 +217,7 @@ const Optimizer: React.FC = () => {
                 : 'bg-gradient-to-r from-accent to-secondary hover:shadow-accent/25 hover:scale-105 active:scale-95'}
             `}
           >
-            {isLoading ? 'Analyzing...' : 'Optimize Prompt'}
+            {isLoading ? t('opt.btn.analyzing') : t('opt.btn.optimize')}
           </button>
         </div>
       </div>
@@ -195,7 +241,7 @@ const Optimizer: React.FC = () => {
               <div className="bg-slate-800/80 p-4 border-b border-slate-700/60 flex items-center justify-between">
                 <h3 className="font-semibold text-slate-400 flex items-center">
                   <i className="fas fa-history mr-2 text-slate-500"></i>
-                  Original Input
+                  {t('opt.col.original')}
                 </h3>
                 {fileInput && (
                   <span className="text-xs bg-slate-700/80 text-slate-300 px-2.5 py-1 rounded-full border border-slate-600 flex items-center">
@@ -206,7 +252,7 @@ const Optimizer: React.FC = () => {
               </div>
               <div className="p-6 bg-[#0d1117] flex-grow overflow-auto max-h-[600px]">
                 <pre className="whitespace-pre-wrap font-mono text-sm text-slate-400 leading-relaxed opacity-80">
-                  {textInput.trim() || (fileInput ? "Content provided via file upload." : "No text input provided.")}
+                  {textInput.trim() || (fileInput ? t('opt.file.content') : t('opt.noInput'))}
                 </pre>
               </div>
             </div>
@@ -217,7 +263,7 @@ const Optimizer: React.FC = () => {
                  <div className="flex items-center gap-4">
                    <h3 className="font-semibold text-accent flex items-center">
                      <i className="fas fa-wand-magic-sparkles mr-2"></i>
-                     Optimized
+                     {t('opt.col.optimized')}
                    </h3>
                    
                    {/* History Controls */}
@@ -254,19 +300,19 @@ const Optimizer: React.FC = () => {
                         ${result.improvementType === 'constraints' ? 'bg-red-500/10 text-red-400 border-red-500/20' : ''}
                         ${result.improvementType === 'context' ? 'bg-green-500/10 text-green-400 border-green-500/20' : ''}
                     `}>
-                      {result.improvementType}
+                      {t('opt.improved')}: {result.improvementType}
                     </span>
                     <button 
                       onClick={() => navigator.clipboard.writeText(result.prompt)}
                       className="text-xs bg-accent/20 hover:bg-accent/30 text-accent px-3 py-1.5 rounded-full transition-colors flex items-center"
                     >
-                      <i className="fas fa-copy mr-1.5"></i> Copy
+                      <i className="fas fa-copy mr-1.5"></i> {t('gen.result.copy')}
                     </button>
                     {history.length > 0 && (
                       <button 
                         onClick={handleClearHistory}
                         className="text-xs bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 px-2 py-1.5 rounded-lg transition-colors ml-1 border border-slate-700 hover:border-red-500/30"
-                        title="Clear History"
+                        title={t('opt.clearHistory')}
                       >
                         <i className="fas fa-trash-alt"></i>
                       </button>
@@ -288,7 +334,7 @@ const Optimizer: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="glass-panel p-6 rounded-2xl border-l-4 border-primary">
               <h4 className="text-lg font-semibold text-white mb-3 flex items-center">
-                <i className="fas fa-microscope text-primary mr-2"></i> Optimization Logic
+                <i className="fas fa-microscope text-primary mr-2"></i> {t('opt.logic.title')}
               </h4>
               <p className="text-slate-300 text-sm leading-relaxed">
                 {result.reasoning}
@@ -296,7 +342,7 @@ const Optimizer: React.FC = () => {
             </div>
             <div className="glass-panel p-6 rounded-2xl border-l-4 border-green-500">
               <h4 className="text-lg font-semibold text-white mb-3 flex items-center">
-                <i className="fas fa-tree text-green-500 mr-2"></i> Why this works
+                <i className="fas fa-tree text-green-500 mr-2"></i> {t('opt.why.title')}
               </h4>
               <ul className="space-y-2">
                 {result.facts.map((fact, idx) => (

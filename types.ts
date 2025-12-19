@@ -4,6 +4,8 @@ export enum AppMode {
   TEMPLATES = 'TEMPLATES'
 }
 
+export type Language = 'en' | 'zh';
+
 export interface OptimizationResult {
   prompt: string;
   reasoning: string;

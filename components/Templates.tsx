@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { PROMPT_TEMPLATES } from '../data/templates';
-import { PromptTemplate } from '../types';
+import { getTemplates } from '../data/templates';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface TemplatesProps {
   onSelect: (content: string) => void;
@@ -9,10 +9,19 @@ interface TemplatesProps {
 const CATEGORIES = ['All', 'Business', 'Coding', 'Writing', 'Marketing', 'Education'];
 
 const Templates: React.FC<TemplatesProps> = ({ onSelect }) => {
+  const { t, language } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredTemplates = PROMPT_TEMPLATES.filter(template => {
+  const templates = getTemplates(language);
+
+  const filteredTemplates = templates.filter(template => {
+    // We map the UI category "All" to internal logic, but for categories, 
+    // we should match against the template category. 
+    // The template category is stored in English in data/templates for consistency, 
+    // but we can map the display button to translated text.
+    
+    // Note: In data/templates.ts, categories are English enum values ('Business', etc.)
     const matchesCategory = selectedCategory === 'All' || template.category === selectedCategory;
     const matchesSearch = template.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           template.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -34,10 +43,10 @@ const Templates: React.FC<TemplatesProps> = ({ onSelect }) => {
     <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
       <div className="space-y-4 text-center sm:text-left">
         <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-blue-500">
-          Prompt Templates
+          {t('temp.title')}
         </h2>
         <p className="text-slate-400">
-          Browse categorized templates to jumpstart your prompt engineering process.
+          {t('temp.subtitle')}
         </p>
       </div>
 
@@ -55,7 +64,7 @@ const Templates: React.FC<TemplatesProps> = ({ onSelect }) => {
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'}
               `}
             >
-              {cat}
+              {t(`temp.cat.${cat}`)}
             </button>
           ))}
         </div>
@@ -64,7 +73,7 @@ const Templates: React.FC<TemplatesProps> = ({ onSelect }) => {
           <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
           <input 
             type="text" 
-            placeholder="Search templates..."
+            placeholder={t('temp.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-900/50 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-teal-500/50 focus:border-transparent outline-none placeholder-slate-600 transition-all"
@@ -84,7 +93,7 @@ const Templates: React.FC<TemplatesProps> = ({ onSelect }) => {
                 <i className={`fas ${getCategoryIcon(template.category)} text-slate-400 group-hover:text-teal-400`}></i>
               </div>
               <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">
-                {template.category}
+                {t(`temp.cat.${template.category}`)}
               </span>
             </div>
             
@@ -103,7 +112,7 @@ const Templates: React.FC<TemplatesProps> = ({ onSelect }) => {
                 onClick={() => onSelect(template.content)}
                 className="w-full py-2 rounded-lg bg-slate-800 hover:bg-teal-500/20 text-slate-300 hover:text-teal-300 font-medium text-sm transition-all border border-slate-700 hover:border-teal-500/30 flex items-center justify-center"
                 >
-                <i className="fas fa-pen-fancy mr-2"></i> Use Template
+                <i className="fas fa-pen-fancy mr-2"></i> {t('temp.use')}
                 </button>
             </div>
           </div>
@@ -113,7 +122,7 @@ const Templates: React.FC<TemplatesProps> = ({ onSelect }) => {
       {filteredTemplates.length === 0 && (
         <div className="text-center py-20 text-slate-500">
           <i className="fas fa-inbox text-4xl mb-4 opacity-30"></i>
-          <p>No templates found matching your criteria.</p>
+          <p>{t('temp.noResults')}</p>
         </div>
       )}
     </div>
